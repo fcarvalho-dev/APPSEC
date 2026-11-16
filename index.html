@@ -230,17 +230,10 @@ const NETMAP=
 'SUB=${IP%.*};'+
 'echo "Minha rede: ${SUB}.0/24   (meu IP: $IP)";'+
 'echo "Varrendo vizinhanca, aguarde...";'+
-'command -v nmap >/dev/null && nmap -sn ${SUB}.0/24 >/dev/null 2>&1 || ping -c1 ${SUB}.1 >/dev/null 2>&1;'+
-'F="$PREFIX/share/nmap/nmap-mac-prefixes";'+
-'printf "\\n%-15s %-18s %s\\n" "IP" "MAC" "FABRICANTE";'+
+'printf "\\n%-15s %s\\n" "IP" "NOME (DNS reverso)";'+
 'echo "-------------------------------------------------------";'+
-'tail -n +2 /proc/net/arp | while read ip hw fl mac mask dev; do '+
-'[ "$mac" = "00:00:00:00:00:00" ] && continue; '+
-'oui=$(echo "$mac" | tr -d ":" | cut -c1-6 | tr a-f A-F); '+
-'ven=$(grep -i "^$oui " "$F" 2>/dev/null | head -1 | cut -d" " -f2-); '+
-'[ -z "$ven" ] && ven="(desconhecido)"; '+
-'printf "%-15s %-18s %s\\n" "$ip" "$mac" "$ven"; done;'+
-'echo ""; echo "Dica: o .1 normalmente e o roteador. Toque em Explicar."';
+'nmap -sn -T4 -oG - ${SUB}.0/24 2>/dev/null | awk \'/Status: Up/{n=$3; gsub(/[()]/,"",n); if(n=="")n="-"; printf "%-15s %s\\n",$2,n; c++} END{print "\\n" c+0 " aparelho(s) ativo(s)."}\';'+
+'echo ""; echo "Obs: sem root o Android 10+ bloqueia MAC/fabricante (/proc/net/arp)."; echo "Dica: o .1 normalmente e o roteador. Toque em Explicar."';
 
 const IPINFO=
 'IP=$(python3 -c "import socket;s=socket.socket(2,2);s.connect((\'8.8.8.8\',80));print(s.getsockname()[0])" 2>/dev/null);'+
