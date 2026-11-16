@@ -172,7 +172,7 @@
 <script>
 const OLLAMA="http://127.0.0.1:11434";
 const OUTDIR="/storage/emulated/0/KitAppSec/out";
-let model="qwen2.5:3b", imgB64=null, busy=false, history=[];
+let model="qwen2.5:3b", imgB64=null, busy=false, history=[], curAbort=null;
 const $=s=>document.querySelector(s);
 const chat=$("#chat");
 
@@ -392,32 +392,46 @@ async function ping(){try{const r=await fetch(OLLAMA+"/api/tags",{cache:'no-stor
   if(r.ok){$("#dot").classList.add('on');$("#st").textContent='online';$("#offline").classList.remove('show');return true;}}catch(e){}
   $("#dot").classList.remove('on');$("#st").textContent='offline';$("#offline").classList.add('show');return false;}
 setInterval(ping,4000);
-function startOllama(){if(window.Termux&&window.Termux.run){window.Termux.run("ollama serve >/dev/null 2>&1 &");$("#st").textContent='iniciando…';setTimeout(ping,3500);}
+function startOllama(){if(window.Termux&&window.Termux.run){window.Termux.run("pgrep -f 'ollama serve' >/dev/null || (ollama serve >/dev/null 2>&1 &)");$("#st").textContent='iniciando…';setTimeout(ping,2500);setTimeout(ping,6000);}
   else add('ia','Ponte com o Termux indisponível. Abra pelo app (não navegador).',true);}
 
-async function streamOllama(prompt,onTok,onErr,imgs){
-  const payload={model,stream:true,prompt};if(imgs)payload.images=imgs;
+async function streamOllama(prompt,onTok,onErr,imgs,signal){
+  const SYS="Voce e um assistente tecnico de seguranca/AppSec rodando local no celular via Ollama. Responda em portugues, direto e curto. Nunca diga que nao recebeu texto.";
+  const payload={model,stream:true,prompt,system:SYS,keep_alive:"10m",options:{num_predict:512,num_ctx:2048,temperature:0.6}};
+  if(imgs)payload.images=imgs;
   try{
-    const r=await fetch(OLLAMA+"/api/generate",{method:'POST',body:JSON.stringify(payload)});
-    if(!r.ok)throw new Error('HTTP '+r.status+' — modelo "'+model+'" existe? (ollama pull '+model+')');
+    const r=await fetch(OLLAMA+"/api/generate",{method:'POST',body:JSON.stringify(payload),signal});
+    if(!r.ok)throw new Error('HTTP '+r.status+' - modelo "'+model+'" existe? (ollama pull '+model+')');
     const rd=r.body.getReader(),dec=new TextDecoder();let acc='',buf='';
     while(true){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
       let ls=buf.split('\n');buf=ls.pop();
       for(const ln of ls){if(!ln.trim())continue;try{const j=JSON.parse(ln);if(j.response){acc+=j.response;onTok(acc);}}catch(e){}}}
     return acc;
-  }catch(e){onErr&&onErr(e.message);return null;}
+  }catch(e){
+    const msg=(e&&e.name==='AbortError')?'Parado (sem resposta a tempo). O modelo pode estar carregando na 1a vez - tente de novo.':(e&&e.message)||String(e);
+    onErr&&onErr(msg);return null;
+  }
 }
 async function enviar(){
-  if(busy)return;const txt=ta.value.trim();if(!txt&&!imgB64)return;
+  if(busy){if(curAbort)curAbort.abort();return;}
+  const txt=ta.value.trim();if(!txt&&!imgB64)return;
   const online=await ping();add('user',txt||'[imagem]');
   if(imgB64){const im=document.createElement('img');im.className='thumb';im.src='data:image/jpeg;base64,'+imgB64;chat.lastChild.appendChild(im);}
   ta.value='';ta.style.height='auto';history.push({role:'user',content:txt});saveHist();
-  if(!online){add('ia','Ollama offline. Toque em "▶ Ligar Ollama" e espere ficar verde.',true);return;}
-  busy=true;$("#send").disabled=true;const out=add('ia','');out.innerHTML='<span class="typing"></span>';
+  if(!online){add('ia','Ollama offline. Toque em "> Ligar Ollama" e espere ficar verde.',true);return;}
+  busy=true;const sendBtn=$("#send");if(sendBtn)sendBtn.textContent='Parar';
+  const out=add('ia','');out.innerHTML='<span class="typing"></span>';
   const imgs=imgB64?[imgB64]:null;clearImg();out.textContent='';
-  const acc=await streamOllama(txt,t=>{out.textContent=t;chat.scrollTop=chat.scrollHeight;},e=>{out.className='msg ia err';out.textContent='Erro: '+e;},imgs);
-  if(acc){history.push({role:'assistant',content:acc});saveHist();}
-  busy=false;$("#send").disabled=false;
+  curAbort=new AbortController();
+  let idle=setTimeout(()=>curAbort.abort(),45000); // 45s sem NENHUM token = aborta
+  const bump=()=>{clearTimeout(idle);idle=setTimeout(()=>curAbort.abort(),45000);};
+  try{
+    const acc=await streamOllama(txt,t=>{out.textContent=t;bump();chat.scrollTop=chat.scrollHeight;},
+      e=>{out.className='msg ia err';out.textContent='Erro: '+e;},imgs,curAbort.signal);
+    if(acc){history.push({role:'assistant',content:acc});saveHist();}
+  }finally{
+    clearTimeout(idle);curAbort=null;busy=false;if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='';}
+  }
 }
 ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}});
 
