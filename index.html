@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<!-- KITAPPSEC-UI v:6 -->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Kit AppSec IA</title>
+<style>
+  :root{
+    --bg:#0b0f14;--panel:#121923;--panel2:#0e141c;--line:#1e2a38;
+    --txt:#e8eef5;--muted:#8aa0b6;--accent:#35c6a8;--accent2:#2a84ff;
+    --user:#15324a;--ia:#141c26;--danger:#ff5d5d;--warn:#ffb454;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
+  #app{display:flex;flex-direction:column;height:100%}
+  header{display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:linear-gradient(180deg,#121b26,#0e141c);border-bottom:1px solid var(--line)}
+  header .logo{font-weight:700;letter-spacing:.3px}
+  header .logo span{color:var(--accent)}
+  header .ver{font-size:10px;color:var(--muted);border:1px solid var(--line);padding:1px 5px;border-radius:6px}
+  .status{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--danger);box-shadow:0 0 8px var(--danger)}
+  .dot.on{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  #offline{display:none;align-items:center;gap:8px;padding:8px 14px;background:#2a1708;
+    border-bottom:1px solid #3a2f16;color:var(--warn);font-size:12.5px;cursor:pointer}
+  #offline.show{display:flex}
+
+  #tabs{display:flex;background:var(--panel2);border-bottom:1px solid var(--line)}
+  #tabs .t{flex:1;text-align:center;padding:11px 6px;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  #tabs .t.sel{color:var(--txt);border-bottom-color:var(--accent)}
+  .page{flex:1;overflow-y:auto;display:none;flex-direction:column}
+  .page.sel{display:flex}
+
+  #chat{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:88%;padding:10px 13px;border-radius:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+  .user{align-self:flex-end;background:var(--user);border:1px solid #1d4a6b;border-bottom-right-radius:4px}
+  .ia{align-self:flex-start;background:var(--ia);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .ia.err{border-color:var(--danger);color:#ffd4d4}
+  .thumb{max-width:180px;border-radius:10px;margin-top:6px;display:block}
+
+  .toolbar{display:flex;gap:8px;padding:8px 12px;background:var(--panel2);border-top:1px solid var(--line);overflow-x:auto}
+  .chip{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:7px 12px;border-radius:999px;font-size:12.5px;cursor:pointer;transition:.15s}
+  .chip:active{transform:scale(.96)}
+  .chip.sel{color:var(--txt);border-color:var(--accent);background:#10211d}
+
+  #bar{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;background:var(--panel2);border-top:1px solid var(--line)}
+  #img{display:none}
+  .iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);width:42px;height:42px;border-radius:12px;font-size:19px;cursor:pointer;flex:0 0 auto}
+  #texto{flex:1;min-height:42px;max-height:120px;resize:none;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 12px;font-size:15px;font-family:inherit}
+  #send{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#04110d;font-weight:700;width:42px;height:42px;border-radius:12px;font-size:18px;cursor:pointer;flex:0 0 auto}
+  #send:disabled{opacity:.4}
+  #imgtag{max-width:70px;border-radius:8px;border:1px solid var(--line)}
+  #preview{display:none;padding:6px 12px 0;align-items:center;gap:8px}
+  #preview .x{color:var(--danger);cursor:pointer;font-size:13px}
+  .typing{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+  @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+  .scope{margin:12px;padding:9px 12px;border:1px solid #3a2f16;background:#1c1507;color:var(--warn);border-radius:10px;font-size:12px;line-height:1.4}
+  .sec{margin:4px 12px 2px;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+  .cfgbtn{margin:6px 12px;display:flex;gap:8px;flex-wrap:wrap}
+  .cfgbtn button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:8px 12px;border-radius:9px;font-size:12.5px;cursor:pointer}
+  .cfgbtn button.stop{color:var(--danger);border-color:#4a1d1d}
+  .cfgbtn button.ai{color:var(--accent);border-color:#1d4a3f}
+
+  .tool{margin:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .tool .top{display:flex;align-items:center;gap:8px}
+  .tool .name{font-weight:600;font-size:14px}
+  .tool .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .tool .go{margin-left:auto;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04110d;border:none;font-weight:700;padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer;flex:0 0 auto}
+  .tool .go:active{transform:scale(.96)}
+
+  .outwrap{margin:8px 12px}
+  .outhead{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .outhead .clr{margin-left:auto;color:var(--muted);cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px}
+  .blk{background:var(--panel2);border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}
+  .blk .h{display:flex;flex-direction:column;gap:2px;padding:9px 11px;background:#101823;border-bottom:1px solid var(--line)}
+  .blk .h .lbl{font-weight:600;font-size:13px}
+  .blk .h .cmd{font-size:10.5px;color:#6f8aa3;font-family:ui-monospace,monospace;word-break:break-all}
+  .blk pre{margin:0;padding:11px;font-family:ui-monospace,"Cascadia Code",monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;overflow-x:auto;color:#cfe3f2;max-height:46vh;overflow-y:auto}
+  .blk pre.err{color:#ffc9c9}
+  .blk .acts{display:flex;gap:8px;padding:8px 11px;border-top:1px solid var(--line);background:#0d141d}
+  .blk .acts button{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 11px;border-radius:8px;font-size:12px;cursor:pointer}
+  .blk .acts button.ai{color:var(--accent);border-color:#1d4a3f}
+  .blk .explain{padding:11px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.5;white-space:pre-wrap;color:#dfeaf4;background:#0c1620}
+  .mini{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 1s infinite}
+
+  #termbar{display:flex;gap:8px;padding:10px 12px;background:var(--panel2);border-top:1px solid var(--line)}
+  #termin{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 12px;font-family:ui-monospace,monospace;font-size:13px}
+  #termrun{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#04110d;font-weight:700;padding:0 16px;border-radius:10px;font-size:14px;cursor:pointer}
+
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  #modal.show{display:flex}
+  .mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:420px;padding:16px;animation:fade .15s ease}
+  .mbox h3{margin:0 0 6px;font-size:16px}
+  .mbox p{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.45;white-space:pre-wrap}
+  .mbox .fld{margin-bottom:10px}
+  .mbox .fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .mbox .fld input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:10px 11px;font-size:14px;font-family:ui-monospace,monospace}
+  .mbox .mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+  .mbox .mbtns button{padding:9px 15px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--txt)}
+  .mbox .mbtns button.ok{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04110d;border:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Kit <span>AppSec</span> IA</div>
+    <div class="ver" id="ver">v6</div>
+    <div class="status"><span class="dot" id="dot"></span><span id="st">…</span></div>
+  </header>
+
+  <div id="offline" onclick="startOllama()">⚠ Ollama offline — toque para ligar. (Se o celular reiniciou, ele cai e precisa religar.)</div>
+
+  <div id="tabs">
+    <div class="t sel" data-p="ia" onclick="tab(this)">💬 IA</div>
+    <div class="t" data-p="sec" onclick="tab(this)">🛡 AppSec</div>
+    <div class="t" data-p="term" onclick="tab(this)">⌨ Terminal</div>
+  </div>
+
+  <div class="page sel" id="p-ia">
+    <div id="chat"></div>
+    <div class="toolbar">
+      <div class="chip" onclick="startOllama()">▶ Ligar Ollama</div>
+      <div class="chip sel" data-m="qwen2.5:3b" onclick="pick(this)">qwen2.5:3b</div>
+      <div class="chip" data-m="qwen2.5:1.5b" onclick="pick(this)">1.5b rápido</div>
+      <div class="chip" data-m="moondream" onclick="pick(this)">moondream visão</div>
+      <div class="chip" onclick="clearChat()">🗑</div>
+    </div>
+    <div id="preview"><img id="imgtag"><span class="x" onclick="clearImg()">remover</span></div>
+    <div id="bar">
+      <input type="file" id="img" accept="image/*">
+      <button class="iconbtn" onclick="document.getElementById('img').click()">📷</button>
+      <textarea id="texto" rows="1" placeholder="Pergunte algo (ex: melhore meu app, explique X)…"></textarea>
+      <button id="send" onclick="enviar()">➤</button>
+    </div>
+  </div>
+
+  <div class="page" id="p-sec">
+    <div class="scope">⚠ Use somente em equipamentos e redes seus. Pentest em rede de terceiros sem autorização é crime. Este kit é pro seu laboratório.</div>
+    <div class="cfgbtn">
+      <button onclick="checkStorage()">🔄 Status do update</button>
+      <button class="ai" onclick="checkUpdateNow()">⬆ Buscar atualização</button>
+      <button onclick="setUpdateUrl()">🔗 URL de update</button>
+      <button onclick="window.App&&App.reload()">↻ Recarregar UI</button>
+      <button class="ai" onclick="pullModel()">👁 Baixar moondream</button>
+      <button class="stop" onclick="stopAll()">⏹ Parar comandos</button>
+    </div>
+    <div class="outwrap">
+      <div class="outhead"><span>Resultados</span><span class="clr" onclick="document.getElementById('out').innerHTML=''">limpar</span></div>
+      <div id="out"></div>
+    </div>
+    <div id="catalog"></div>
+    <div style="height:20px"></div>
+  </div>
+
+  <div class="page" id="p-term">
+    <div class="scope" style="border-color:#16303a;background:#071219;color:var(--muted)">Comando roda no Termux e o resultado volta aqui. Cada saída tem 🧠 Explicar.</div>
+    <div id="termout" style="flex:1;overflow-y:auto;padding:4px 12px 12px"></div>
+    <div id="termbar">
+      <input id="termin" placeholder="ex: ls -la   |   whoami   |   ip neigh" autocapitalize="off" autocomplete="off" spellcheck="false">
+      <button id="termrun" onclick="runFree()">▶</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal"><div class="mbox" id="mbox"></div></div>
+
+<script>
+const OLLAMA="http://127.0.0.1:11434";
+const OUTDIR="/storage/emulated/0/KitAppSec/out";
+let model="qwen2.5:3b", imgB64=null, busy=false, history=[];
+const $=s=>document.querySelector(s);
+const chat=$("#chat");
+
+/* ===== modal (WebView bloqueia prompt/alert/confirm nativos) ===== */
+function modal(html){return new Promise(res=>{const box=$("#mbox");box.innerHTML=html;$("#modal").classList.add('show');box._resolve=res;});}
+function closeModal(v){$("#modal").classList.remove('show');const b=$("#mbox");if(b._resolve){const r=b._resolve;b._resolve=null;r(v);}}
+function askInputs(title,fields){
+  let f=fields.map((x,i)=>`<div class="fld"><label>${x[1]}</label><input id="mf${i}" value="${x[2]||''}"></div>`).join('');
+  const p=modal(`<h3>${title}</h3>${f}<div class="mbtns"><button onclick="closeModal(null)">Cancelar</button><button class="ok" onclick="mOk()">OK</button></div>`);
+  setTimeout(()=>{const el=document.getElementById('mf0');el&&el.focus();},60);
+  return p;
+}
+function mOk(){const vals={};$("#mbox").querySelectorAll('input').forEach((inp,idx)=>{vals['f'+idx]=inp.value.trim();});closeModal(vals);}
+function mAlert(title,msg){return modal(`<h3>${title}</h3><p>${msg}</p><div class="mbtns"><button class="ok" onclick="closeModal(true)">OK</button></div>`);}
+function mConfirm(title,msg){return modal(`<h3>${title}</h3><p>${msg}</p><div class="mbtns"><button onclick="closeModal(false)">Não</button><button class="ok" onclick="closeModal(true)">Sim</button></div>`);}
+
+function tab(el){
+  document.querySelectorAll('#tabs .t').forEach(t=>t.classList.remove('sel'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');$('#p-'+el.dataset.p).classList.add('sel');
+}
+
+/* ===== captura por ARQUIVO via window.Termux.run (o mesmo que liga o Ollama) ===== */
+function termuxRun(cmd,timeoutMs=180000){
+  return new Promise(resolve=>{
+    if(!(window.Termux&&window.Termux.run)){
+      resolve({out:'',err:'Ponte com o Termux indisponível. Abra pelo app Kit AppSec IA (não pelo navegador).',code:-1});return;
+    }
+    const id='c'+Date.now()+Math.random().toString(36).slice(2,7);
+    const f=OUTDIR+'/'+id+'.txt';
+    const wrapped='mkdir -p '+OUTDIR+'; { '+cmd+' ; } > "'+f+'" 2>&1; echo "__EXIT:$?" >> "'+f+'"; echo "__DONE_'+id+'" >> "'+f+'"';
+    try{window.Termux.run(wrapped);}catch(e){resolve({out:'',err:String(e),code:-1});return;}
+    const url='file://'+f,t0=Date.now();
+    const poll=async()=>{
+      try{
+        const r=await fetch(url+'?t='+Date.now(),{cache:'no-store'});
+        if(r.ok){let txt=await r.text();
+          if(txt.indexOf('__DONE_'+id)>=0){
+            let code=-1;const m=txt.match(/__EXIT:(-?\d+)/);if(m)code=parseInt(m[1]);
+            txt=txt.replace(/__EXIT:-?\d+\s*/,'').replace('__DONE_'+id,'').replace(/\s+$/,'');
+            try{window.Termux.run('rm -f "'+f+'"');}catch(e){}
+            resolve({out:txt,err:'',code});return;
+          }
+        }
+      }catch(e){}
+      if(Date.now()-t0>timeoutMs){resolve({out:'',err:'Tempo esgotado ('+Math.round(timeoutMs/1000)+'s). Pode ainda estar rodando. Se for a 1ª vez, confira a permissão RUN_COMMAND do Termux e o acesso a arquivos.',code:-1});return;}
+      setTimeout(poll,700);
+    };
+    setTimeout(poll,600);
+  });
+}
+
+const NETMAP=
+'IP=$(python3 -c "import socket;s=socket.socket(2,2);s.connect((\'8.8.8.8\',80));print(s.getsockname()[0])" 2>/dev/null);'+
+'SUB=${IP%.*};'+
+'echo "Minha rede: ${SUB}.0/24   (meu IP: $IP)";'+
+'echo "Varrendo vizinhanca, aguarde...";'+
+'command -v nmap >/dev/null && nmap -sn ${SUB}.0/24 >/dev/null 2>&1 || ping -c1 ${SUB}.1 >/dev/null 2>&1;'+
+'F="$PREFIX/share/nmap/nmap-mac-prefixes";'+
+'printf "\\n%-15s %-18s %s\\n" "IP" "MAC" "FABRICANTE";'+
+'echo "-------------------------------------------------------";'+
+'tail -n +2 /proc/net/arp | while read ip hw fl mac mask dev; do '+
+'[ "$mac" = "00:00:00:00:00:00" ] && continue; '+
+'oui=$(echo "$mac" | tr -d ":" | cut -c1-6 | tr a-f A-F); '+
+'ven=$(grep -i "^$oui " "$F" 2>/dev/null | head -1 | cut -d" " -f2-); '+
+'[ -z "$ven" ] && ven="(desconhecido)"; '+
+'printf "%-15s %-18s %s\\n" "$ip" "$mac" "$ven"; done;'+
+'echo ""; echo "Dica: o .1 normalmente e o roteador. Toque em Explicar."';
+
+const IPINFO=
+'IP=$(python3 -c "import socket;s=socket.socket(2,2);s.connect((\'8.8.8.8\',80));print(s.getsockname()[0])" 2>/dev/null);'+
+'echo "Meu IP local: $IP"; echo "Gateway provavel: ${IP%.*}.1";'+
+'echo "--- Vizinhos conhecidos (ARP) ---"; cat /proc/net/arp';
+
+const SYSINFO=
+'echo "Modelo: $(getprop ro.product.model)"; echo "Marca: $(getprop ro.product.brand)";'+
+'echo "Android: $(getprop ro.build.version.release)"; echo "Build: $(getprop ro.build.id)";'+
+'echo "SELinux: $(getenforce 2>/dev/null)"; echo "Kernel: $(uname -r)"; echo "Arch: $(uname -m)"';
+
+const catalog=[
+ {sec:'Configuração'},
+ {name:'⚙ Instalar kit de ferramentas', desc:'Baixa nmap, aircrack-ng, openssl, traceroute e utilitários de DNS. Faça isso uma vez.',
+  cmd:'echo "Instalando (pode demorar)..."; pkg install -y nmap aircrack-ng openssl-tool dnsutils traceroute curl coreutils 2>&1 | tail -6; echo; echo "== Verificando =="; for b in nmap aircrack-ng openssl curl nslookup traceroute; do command -v $b >/dev/null && echo "OK  $b" || echo "FALTA $b"; done', timeout:600000},
+
+ {sec:'Minha rede'},
+ {name:'🗺 Mapa da rede (quem é quem)', desc:'Varre sua LAN e mostra IP + MAC + fabricante de cada aparelho, em vez de só números soltos.', cmd:NETMAP, timeout:240000},
+ {name:'🧭 Meu IP e gateway', desc:'Mostra seu endereço na rede, o provável roteador e os vizinhos já conhecidos.', cmd:IPINFO},
+ {name:'🔌 Portas abertas do roteador', desc:'Escaneia as portas/serviços do gateway — útil pra ver o que ele expõe.', timeout:240000,
+  args:[['gw','Gateway (ex: 192.168.1.1)']], cmd:a=>`nmap -sV -F ${a.f0}`},
+ {name:'🚪 Portas comuns (host seu)', desc:'Checa portas sensíveis conhecidas (FTP, SSH, Telnet, SMB, RDP, MySQL...) num IP seu.', timeout:240000,
+  args:[['target','IP alvo (ex: 192.168.1.10)']], cmd:a=>`nmap -sV -p 21,22,23,25,53,80,110,139,443,445,3306,3389,8080,8443 ${a.f0}`},
+ {name:'🛰 Traceroute', desc:'Mostra o caminho (saltos) até um host — por onde o tráfego passa.', timeout:120000,
+  args:[['host','Host/IP (ex: 1.1.1.1)']], cmd:a=>`traceroute -n -m 15 ${a.f0} 2>&1 || echo "Instale traceroute no kit, ou pode exigir privilégio."`},
+ {name:'📶 Redes Wi-Fi por perto', desc:'Lista redes visíveis com sinal e canal (precisa do Termux:API + localização ligada).',
+  cmd:'termux-wifi-scaninfo 2>/dev/null | head -80 || echo "Instale o Termux:API e ligue a localizacao."'},
+
+ {sec:'Web / TLS (meus sites)'},
+ {name:'🔐 Headers de segurança', desc:'Pega os cabeçalhos HTTP do seu site pra checar HSTS, CSP, X-Frame-Options etc.',
+  args:[['url','URL (ex: https://meusite.com)']], cmd:a=>`curl -sSI "${a.f0}" 2>&1`},
+ {name:'📜 Certificado TLS', desc:'Mostra emissor, validade e domínios do certificado HTTPS do seu servidor.',
+  args:[['host','Host (ex: meusite.com)']], cmd:a=>`echo | openssl s_client -connect ${a.f0}:443 -servername ${a.f0} 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName 2>/dev/null`},
+ {name:'🌐 Consulta DNS', desc:'Resolve um domínio: IPs, registros e servidor que respondeu.',
+  args:[['d','Domínio (ex: exemplo.com)']], cmd:a=>`nslookup ${a.f0}`},
+ {name:'🔎 Subdomínios (domínio seu)', desc:'Testa nomes comuns (www, api, dev, admin...) pra descobrir subdomínios que resolvem.', timeout:120000,
+  args:[['d','Domínio base (ex: meusite.com)']], cmd:a=>`for s in www mail ftp api dev test homolog staging admin vpn ns1 ns2 m blog loja portal app painel; do h="$s.${a.f0}"; if nslookup "$h" >/dev/null 2>&1; then echo "existe: $h"; fi; done; echo "(fim da busca)"`},
+
+ {sec:'Análise de APK (apps seus)'},
+ {name:'📦 Permissões de um APK', desc:'Lê o manifesto do APK e lista as permissões que ele declara. Não precisa instalar o app.',
+  args:[['p','Caminho do .apk (ex: /sdcard/Download/app.apk)']], cmd:a=>`aapt dump permissions "${a.f0}"`},
+ {name:'🏷 Infos do APK', desc:'Pacote, versão, SDK mínimo/alvo e recursos declarados do APK.',
+  args:[['p','Caminho do .apk']], cmd:a=>`aapt dump badging "${a.f0}" | head -45`},
+
+ {sec:'Cripto / senhas'},
+ {name:'#️⃣ Hash de um arquivo', desc:'Calcula SHA-256 e MD5 — pra conferir integridade ou comparar com um hash conhecido.',
+  args:[['p','Caminho do arquivo']], cmd:a=>`sha256sum "${a.f0}"; md5sum "${a.f0}"`},
+ {name:'🔑 Crackear handshake (.cap SEU)', desc:'Ataque de dicionário num handshake WPA2 que você mesmo capturou. Só CPU, offline.', timeout:0,
+  args:[['cap','Caminho do .cap'],['w','Caminho da wordlist']], cmd:a=>`aircrack-ng -w "${a.f1}" "${a.f0}"`},
+
+ {sec:'Aparelho'},
+ {name:'📱 Info do aparelho', desc:'Modelo, Android, estado do SELinux e kernel — a postura básica do device.', cmd:SYSINFO},
+];
+
+(function(){
+ let html='';
+ for(const it of catalog){
+   if(it.sec){html+=`<div class="sec">${it.sec}</div>`;continue;}
+   const idx=catalog.indexOf(it);
+   html+=`<div class="tool"><div class="top"><div class="name">${it.name}</div>
+     <button class="go" onclick="runTool(${idx})">Rodar</button></div>
+     <div class="desc">${it.desc}</div></div>`;
+ }
+ $('#catalog').innerHTML=html;
+})();
+
+async function runTool(idx){
+  const it=catalog[idx]; let cmd=it.cmd, argvals={};
+  if(it.args){
+    const r=await askInputs(it.name.replace(/^[^ ]+ /,''), it.args);
+    if(r===null) return; argvals=r;
+    for(let i=0;i<it.args.length;i++){ if(!argvals['f'+i]){ await mAlert('Faltou preencher','Preencha todos os campos.'); return; } }
+  }
+  if(typeof cmd==='function') cmd=cmd(argvals);
+  const to=it.timeout===0?3600000:(it.timeout||180000);
+  const blk=addBlock($('#out'), it.name.replace(/^[^ ]+ /,''), cmd, true);
+  $('#p-sec').scrollTop=0;
+  const r=await termuxRun(cmd,to); fillBlock(blk,r,cmd);
+}
+
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function addBlock(container,label,cmd,prepend){
+  const b=document.createElement('div');b.className='blk';
+  b.innerHTML=`<div class="h"><span class="lbl">${esc(label)}</span><span class="cmd">$ ${esc(cmd)}</span></div><pre><span class="mini"></span> rodando…</pre>`;
+  if(prepend&&container.firstChild) container.insertBefore(b,container.firstChild); else container.appendChild(b);
+  return b;
+}
+function fillBlock(b,r,cmd){
+  const pre=b.querySelector('pre');let txt=r.out;
+  if(r.err&&r.err.trim()) txt=(txt?txt+'\n':'')+r.err;
+  if(!txt.trim()) txt='(sem saída) exit='+r.code;
+  pre.textContent=txt;
+  if(r.code!==0&&(!r.out||!r.out.trim())) pre.className='err';
+  const acts=document.createElement('div');acts.className='acts';
+  acts.innerHTML=`<button class="ai" onclick="explain(this)">🧠 Explicar</button><button onclick="copyPre(this)">📋 Copiar</button>`;
+  b.appendChild(acts);b._raw=txt;b._cmd=cmd;
+}
+function copyPre(btn){const b=btn.closest('.blk');navigator.clipboard&&navigator.clipboard.writeText(b._raw);btn.textContent='✓ Copiado';setTimeout(()=>btn.textContent='📋 Copiar',1200);}
+
+async function explain(btn){
+  const b=btn.closest('.blk');
+  if(b.querySelector('.explain')){b.querySelector('.explain').scrollIntoView({behavior:'smooth'});return;}
+  const online=await ping();
+  const ex=document.createElement('div');ex.className='explain';b.appendChild(ex);
+  if(!online){ex.textContent='Ollama offline. Vá na aba IA → "▶ Ligar Ollama".';return;}
+  ex.innerHTML='<span class="mini"></span> a IA está analisando…';
+  const prompt=`Você é um instrutor de segurança. Explique de forma didática e curta, em português do Brasil, para um dev, o resultado deste comando de terminal. Diga o que o comando faz, o que cada parte importante da saída significa e o que dá pra concluir ou fazer a seguir. Seja prático.\n\nCOMANDO:\n${b._cmd||''}\n\nSAÍDA:\n${(b._raw||'').slice(0,4000)}`;
+  await streamOllama(prompt,t=>ex.textContent=t,e=>ex.textContent='Erro ao explicar: '+e);
+}
+
+async function runFree(){
+  const inp=$('#termin');const cmd=inp.value.trim();if(!cmd)return;inp.value='';
+  const blk=addBlock($('#termout'),'$ '+cmd,cmd,false);
+  $('#termout').scrollTop=$('#termout').scrollHeight;
+  const r=await termuxRun(cmd);fillBlock(blk,r,cmd);
+}
+$('#termin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runFree();}});
+
+async function pullModel(){
+  const blk=addBlock($('#out'),'Baixando moondream','ollama pull moondream',true);$('#p-sec').scrollTop=0;
+  const r=await termuxRun('ollama pull moondream 2>&1 | tail -15',1800000);fillBlock(blk,r,'ollama pull moondream');
+}
+function stopAll(){
+  if(window.Termux&&window.Termux.run) window.Termux.run('pkill -f nmap; pkill aircrack-ng; pkill -f traceroute; pkill -f "ollama pull"; true');
+  mAlert('Parar','Sinal de parada enviado aos comandos longos (nmap, aircrack, traceroute, pull).');
+}
+function checkUpdateNow(){
+  if(window.App&&App.checkUpdate) App.checkUpdate();
+  else mAlert('Indisponível','Abra pelo app Kit AppSec IA (não pelo navegador).');
+}
+async function setUpdateUrl(){
+  if(!(window.App&&App.getUpdateUrl)){ mAlert('Indisponível','Esta versão do app nativo não tem OTA. Reinstale o APK mais novo.'); return; }
+  const r=await askInputs('URL de atualização',[['u','Base https:// (pasta com index.html e version.txt)',App.getUpdateUrl()]]);
+  if(r&&r.f0) App.setUpdateUrl(r.f0);
+}
+async function checkStorage(){
+  const has=window.App&&App.hasStorage&&App.hasStorage();
+  const path=(window.App&&App.uiPath)?App.uiPath():'(indisponível)';
+  if(has){const ota=(App.otaVersion?App.otaVersion():0), url=(App.getUpdateUrl?App.getUpdateUrl():'(sem OTA)');
+    await mAlert('✅ Update ativo','UI lida de:\n'+path+'\n\nOTA versão local: '+ota+'\nFonte: '+url+'\n\nO app busca atualização sozinho ao abrir. Ou toque em "⬆ Buscar atualização".');}
+  else{const go=await mConfirm('Permissão de arquivos','Pra atualizar o app sem reinstalar, conceda "Acesso a todos os arquivos". Abrir as configurações agora?');if(go)window.App&&App.requestStorage&&App.requestStorage();}
+}
+
+function pick(el){document.querySelectorAll('.chip[data-m]').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');model=el.dataset.m;}
+function saveHist(){try{localStorage.setItem('kit_hist',JSON.stringify(history.slice(-40)));}catch(e){}}
+function loadHist(){try{const h=JSON.parse(localStorage.getItem('kit_hist')||'[]');history=h;for(const m of h)add(m.role==='user'?'user':'ia',m.content);}catch(e){}}
+function clearChat(){history=[];chat.innerHTML="";try{localStorage.removeItem('kit_hist');}catch(e){}}
+const ta=$("#texto");
+ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px';});
+$("#img").addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{imgB64=r.result.split(',')[1];$("#imgtag").src=r.result;$("#preview").style.display='flex';
+    document.querySelectorAll('.chip[data-m]').forEach(c=>{if(c.dataset.m==='moondream')pick(c);});};r.readAsDataURL(f);});
+function clearImg(){imgB64=null;$("#preview").style.display='none';$("#img").value="";}
+function add(role,txt,isErr){const d=document.createElement('div');d.className='msg '+(role==='user'?'user':'ia')+(isErr?' err':'');d.textContent=txt;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;}
+async function ping(){try{const r=await fetch(OLLAMA+"/api/tags",{cache:'no-store'});
+  if(r.ok){$("#dot").classList.add('on');$("#st").textContent='online';$("#offline").classList.remove('show');return true;}}catch(e){}
+  $("#dot").classList.remove('on');$("#st").textContent='offline';$("#offline").classList.add('show');return false;}
+setInterval(ping,4000);
+function startOllama(){if(window.Termux&&window.Termux.run){window.Termux.run("ollama serve >/dev/null 2>&1 &");$("#st").textContent='iniciando…';setTimeout(ping,3500);}
+  else add('ia','Ponte com o Termux indisponível. Abra pelo app (não navegador).',true);}
+
+async function streamOllama(prompt,onTok,onErr,imgs){
+  const payload={model,stream:true,prompt};if(imgs)payload.images=imgs;
+  try{
+    const r=await fetch(OLLAMA+"/api/generate",{method:'POST',body:JSON.stringify(payload)});
+    if(!r.ok)throw new Error('HTTP '+r.status+' — modelo "'+model+'" existe? (ollama pull '+model+')');
+    const rd=r.body.getReader(),dec=new TextDecoder();let acc='',buf='';
+    while(true){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
+      let ls=buf.split('\n');buf=ls.pop();
+      for(const ln of ls){if(!ln.trim())continue;try{const j=JSON.parse(ln);if(j.response){acc+=j.response;onTok(acc);}}catch(e){}}}
+    return acc;
+  }catch(e){onErr&&onErr(e.message);return null;}
+}
+async function enviar(){
+  if(busy)return;const txt=ta.value.trim();if(!txt&&!imgB64)return;
+  const online=await ping();add('user',txt||'[imagem]');
+  if(imgB64){const im=document.createElement('img');im.className='thumb';im.src='data:image/jpeg;base64,'+imgB64;chat.lastChild.appendChild(im);}
+  ta.value='';ta.style.height='auto';history.push({role:'user',content:txt});saveHist();
+  if(!online){add('ia','Ollama offline. Toque em "▶ Ligar Ollama" e espere ficar verde.',true);return;}
+  busy=true;$("#send").disabled=true;const out=add('ia','');out.innerHTML='<span class="typing"></span>';
+  const imgs=imgB64?[imgB64]:null;clearImg();out.textContent='';
+  const acc=await streamOllama(txt,t=>{out.textContent=t;chat.scrollTop=chat.scrollHeight;},e=>{out.className='msg ia err';out.textContent='Erro: '+e;},imgs);
+  if(acc){history.push({role:'assistant',content:acc});saveHist();}
+  busy=false;$("#send").disabled=false;
+}
+ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}});
+
+loadHist();ping();
+</script>
+</body>
+</html>
